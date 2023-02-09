@@ -1,5 +1,9 @@
 #!/bin/bash
 
+bcftools=/home/amisra7/scratch16-rmccoy22/amisra7/filtering/bcftools/bcftools
+export BCFTOOLS_PLUGINS=/home/amisra7/scratch16-rmccoy22/amisra7/filtering/bcftools/plugins
+
+
 outdir=/home/amisra7/scratch16-rmccoy22/amisra7/filtering/vcf_populations/test_outdir
 outdir="${outdir%/}"
 # when taking input, rememeber to strip last slash if exists ${INPUT%/}
@@ -18,7 +22,6 @@ popnames=($( awk 'BEGIN{FS=OFS="\t"} { print $3 }' $groupfn | sort -u ))
 
 for pop in "${popnames[@]}"
 do
-    #pop="${p%%.*}"
     mkdir -p $outdir/$pop
 done
 
@@ -38,16 +41,17 @@ do
 
     awk -v chr=$chr 'BEGIN{FS=OFS="\t"} { printf "%s\t%s\t%s_%s\n", $1, $2, chr, $3 }' $groupfn > $chrgroupfn
 
-    # bcftools +split "$i" -o "$workdir" -Ov -G "$chrgroupfn" 2>/dev/null
-    bcftools +split $i -o $workdir -Ov -G $chrgroupfn 2>$workdir/error.log
 
-    for f in $workdir/chr*.vcf; do pop=$( echo -e "$f" | sed 's\.*/\\;s\_.*\\' ); mv $f $outdir/$pop/. ; done
+    # bcftools +split "$i" -o "$workdir" -Ov -G "$chrgroupfn" 2>/dev/null
+    $bcftools +split $i -o $workdir -Ov -G $chrgroupfn 2>$workdir/error.log
+
+    for f in $workdir/chr*.vcf; do pop=$( echo -e "$f" | sed 's\.*_\\;s\[.].*\\' ); mv $f $outdir/$pop/. ; done
 
     rm $chrgroupfn
 
     echo "Finished sorting $chr by population!"
 done
 
-#rm -rf "$workdir"
+rm -rf "$workdir"
 
 echo "All chromosomes complete!"
