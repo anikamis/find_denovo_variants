@@ -43,17 +43,24 @@ done
 
 
 # call vcftools on every chromosome vcf to filter out all related individuals
-files=($( ls $indir/*.vcf ))
+#TODO: change this back
+# files=($( ls $indir/*.vcf ))
+files=($( ls $indir/*12*.vcf ))
 
 for i in "${files[@]}"
 do
     fname="${i##*/}"
+    prefix=$outdir/"${fname%.*}"
+
     chr="${fname%%_*}"
 
+    echo $fname_prefix
     echo "Starting $chr!"
 
-    vcftools --vcf "$i" --out "$outdir" --remove "$related" --recode
+    vcftools --vcf "$i" --out "$prefix" --remove "$related" --recode
 
     echo "Finished $chr!"
 
 done
+
+echo "All done!"
