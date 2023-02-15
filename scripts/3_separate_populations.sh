@@ -50,11 +50,10 @@ awk 'BEGIN{FS=OFS="\t"} NR>1 { printf "%s\t%s\t%s\n", $1, "-", $4 }' $raw_tsv > 
 
 # create output directory for each population in study
 popnames=($( awk 'BEGIN{FS=OFS="\t"} { print $3 }' $groups | sort -u ))
-
 for population in "${popnames[@]}"; do mkdir -p $outdir/$population ; done
 
 # loop over all vcf files in input directory
-vcfs=($( ls $indir/*.vcf ))
+# vcfs=($( ls $indir/*.vcf ))
 
 for i in "${vcfs[@]}"
 do
@@ -62,9 +61,10 @@ do
     chr="${i##*/}"
     chr="${chr%%_*}"
 
+    echo "Starting $chr!"
     # run bcftools split plugin with -G option
     # will output one vcf per population into "working" directory
-    $bcftools +split $i -o $workdir -Ov -G $groups 2>$workdir/error.log
+    bcftools +split $i -o $workdir -Ov -G $groups 2>$workdir/error.log
 
     # rename output vcf files by prepending chromosome to filename
     # and moving to respective population folder
