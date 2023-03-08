@@ -4,19 +4,22 @@
 #                                    -i <directory containing output from step 2>
 #                                    -o <desired output directory for all vcfs separated by population>
 
-# TODO: this can be deleted once rockfish starts working again
-# TODO: but for now, set command alias to path of cloned bcftools repo
-bcftools=/home/amisra7/scratch16-rmccoy22/amisra7/filtering/bcftools/bcftools
+# # TODO: this can be deleted once rockfish starts working again
+# # TODO: but for now, set command alias to path of cloned bcftools repo
+bcftools="/home/amisra7/scratch16-rmccoy22/amisra7/filtering/bcftools/bcftools"
 export BCFTOOLS_PLUGINS=/home/amisra7/scratch16-rmccoy22/amisra7/filtering/bcftools/plugins
 
 # parse arguments
 usage() { echo "$0 usage:" && grep " .)\ #" $0; exit 0; }
 
 [ $# -eq 0 ] && usage
-while getopts "hp:i:o:" arg; do
+while getopts "hp:u:i:o:" arg; do
     case $arg in
-        p) # -t <location of tsv sourced from https://www.internationalgenome.org/data-portal/sample > "Download the list">
+        p) # -p <location of tsv sourced from https://www.internationalgenome.org/data-portal/sample > "Download the list">
             raw_tsv=${OPTARG}
+            ;;
+        u) # -u location of unrelated_ids.txt generated from step one
+            unrelated=${OPTARG}
             ;;
         i) # -i <directory containing phased vcf files of all chromosomes for unrelated individuals (step 2 output dir)>
             indir=${OPTARG%/}
@@ -44,16 +47,33 @@ done
 workdir="$outdir"/working
 mkdir -p "$workdir"
 
+
+echo "Making groups file!"
 # generate tsv file of input format desired by bcftools +split -G option
 groups="$workdir"/group_file.tsv
-awk 'BEGIN{FS=OFS="\t"} NR>1 { printf "%s\t%s\t%s\n", $1, "-", $4 }' $raw_tsv > $groups
+while IFS="" read -r i || [ -n "$i" ]
+do
+
+    popid="$( grep "$i" "$raw_tsv" | awk 'BEGIN{FS=OFS="\t"} { printf "%s", $4 }' )"
+
+    # omits individuals from several populations (e.g. ID HG01783 )
+    if [[ $popid == *","* ]]; then
+        continue
+    fi
+
+    printf "%s\t%s\t%s\n" $i "-" $popid >> "$groups"
+
+done < "$unrelated"
+
+echo "Groups file complete!"
 
 # create output directory for each population in study
 popnames=($( awk 'BEGIN{FS=OFS="\t"} { print $3 }' $groups | sort -u ))
+lastpop=${popnames[-1]}
 for population in "${popnames[@]}"; do mkdir -p $outdir/$population ; done
 
 # loop over all vcf files in input directory
-# vcfs=($( ls $indir/*.vcf ))
+vcfs=($( ls $indir/*.vcf ))
 
 for i in "${vcfs[@]}"
 do
@@ -61,18 +81,28 @@ do
     chr="${i##*/}"
     chr="${chr%%_*}"
 
+    # we've already separated this chromosome
+    if [ -f "$outdir"/"$lastpop"/"$chr"_"$lastpop".vcf ]; 
+    then
+        continue
+    fi
+
     echo "Starting $chr!"
+
     # run bcftools split plugin with -G option
     # will output one vcf per population into "working" directory
-    bcftools +split $i -o $workdir -Ov -G $groups 2>$workdir/error.log
+    "$bcftools" +split "$i" -o "$workdir" -Ov -G "$groups" 2>"$workdir"/error.log
 
     # rename output vcf files by prepending chromosome to filename
     # and moving to respective population folder
-    for f in $workdir/*.vcf; do pop=$( echo -e "$f" | sed 's\.*/\\;s\[.].*\\' ); mv $f $outdir/$pop/"$chr"_$pop.vcf ; done
+
+    for f in "$workdir"/*.vcf; do pop=$( echo -e "$f" | sed 's\.*/\\;s\[.].*\\' ); mv "$f" "$outdir"/"$pop"/"$chr"_"$pop".vcf ; done
 
     echo "Finished sorting $chr by population!"
+    break
 done
 
 rm -rf "$workdir"
 
 echo "All chromosomes complete!"
+

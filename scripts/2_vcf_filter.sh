@@ -43,9 +43,7 @@ done
 
 
 # call vcftools on every chromosome vcf to filter out all related individuals
-#TODO: change this back
 files=($( ls $indir/*.vcf ))
-# files=($( ls $indir/*12*.vcf ))
 
 for i in "${files[@]}"
 do
@@ -53,6 +51,12 @@ do
     chr="${fname%%_*}"
 
     prefix=$outdir/"${chr}"_unrelated_phased
+
+    # we've already filtered this chromosome
+    if [ -f "$prefix".recode.vcf ]; 
+    then
+        continue
+    fi
 
     echo "Starting $chr filtering!"
 
