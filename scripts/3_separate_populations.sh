@@ -99,10 +99,9 @@ do
     for f in "$workdir"/*.vcf; do pop=$( echo -e "$f" | sed 's\.*/\\;s\[.].*\\' ); mv "$f" "$outdir"/"$pop"/"$chr"_"$pop".vcf ; done
 
     echo "Finished sorting $chr by population!"
-    break
 done
 
-rm -rf "$workdir"
+#rm -rf "$workdir"
 
 echo "All chromosomes complete!"
 

@@ -9,7 +9,7 @@ print("starting now!\n")
 # trios = map: child_id -> [father_id, mother_id]
 trios = np.genfromtxt("id_files/relations_both_parents.txt", dtype=str, delimiter='\t', skip_header=1, autostrip=True)
 trios = {x[0]:(x[1:]) for x in trios}
-
+print(trios)
 
 print("trios created!\n")
 
@@ -24,7 +24,7 @@ print("pop_info created!\n")
 # files = [f for f in os.listdir(indir) if f[-3:] == ".gz"]
 
 indir = ""
-files = ["/home/amisra7/scratch16-rmccoy22/amisra7/filtering/chr22_test_small.vcf"]
+files = ["/home/amisra7/scratch16-rmccoy22/amisra7/filtering/1KGP_small.CHM13v2.0.chr22.recalibrated.snp_indel.pass.phased.vcf.gz"]
 
 outdir = "/home/amisra7/scratch4-rmccoy22/amisra7/new_denovo_tsvs/"
 
@@ -50,6 +50,7 @@ for file in files:
         continue
     
     if not os.path.isfile(infile):
+        print("error: %s not found!\n" % infile)
 
     print("starting data iteration for {0}!\n".format(chr))
 
@@ -102,3 +103,5 @@ for file in files:
                     
 
                 
+# make sure later, sort final out tsvs by pos column
+# maybe add INFO field: can note down double mutants, places where parents are not hom-ref
