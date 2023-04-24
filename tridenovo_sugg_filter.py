@@ -3,7 +3,7 @@ import time
 import os
 import numpy as np
 import gzip
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 input_path = "/home/amisra7/scratch4-rmccoy22/amisra7/orig_denovo_tsvs/"
 #                     0         1      2      3       4            5             6            7          8            9         10        11        12
@@ -16,7 +16,7 @@ header = "\t".join(["#CHROM", "POS", "REF", "ALT", "CHILD_ID", "FATHER_ID", "MOT
 # return 0 if neither
 def unusual_mutations(child, father, mother):
     ret = 0
-    par_alleles = set(father[0], father[-1], mother[0], mother[-1])
+    par_alleles = {father[0], father[-1], mother[0], mother[-1]}
 
     if par_alleles != {"0"}:
         ret += 1
@@ -27,53 +27,85 @@ def unusual_mutations(child, father, mother):
     return ret
 
 
-def make_freqs(data):
-    freqs = defaultdict([0, dict])
+# def make_freqs(data):
+#     freqs = defaultdict(lambda: list([0, dict()]))
 
-    for row in data:
-        alts = ",".split(row[3])
-        cgt = row[7]
+#     for row in data:
+#         alts = ",".split(row[3])
+#         cgt = row[7]
+#         print(cgt)
 
-        if cgt[0] != "0":
-            freqs[row[1]][1][alts[int(cgt[0]) - 1]] += 1
+#         if cgt[0] != "0":
+#             freqs[row[1]][1][alts[int(cgt[0]) - 1]] += 1
         
-        if cgt[-1] != "0":
-            freqs[row[1]][1][alts[int(cgt[-1]) - 1]] += 1
+#         if cgt[-1] != "0":
+#             freqs[row[1]][1][alts[int(cgt[-1]) - 1]] += 1
         
-        freqs[row[1]][0] += 6
+#         freqs[row[1]][0] += 6
     
-    return freqs
+#     return freqs
+
+
 
 omit_unusual_mutations = True
 omit_several_alts = True
 omit_ac = True
-ac = 3
+ac = 1
 omit_allele_fq = True
 afq = 0.002
 
-for i in range(1, 23):
+for i in range(1, 23)[::-1]:
     chr = "chr" + str(i)
     indir = input_path + chr + "/"
 
     infile = indir + chr + "_denovo_filtered.tsv"
     outfile = indir + chr + "_denovo_tdn_filtered.tsv"
 
+    if os.path.isfile(outfile):
+        continue
+
     data = np.genfromtxt(infile, dtype=str, delimiter="\t", skip_header=1, autostrip=True)
 
-    if omit_several_alts:
+    if omit_several_alts and omit_unusual_mutations:
+        data = np.array([x for x in data if len(x[3]) > 1 and unusual_mutations(*(x[7:10])) == 0])
+    elif omit_several_alts:
         data = np.array([x for x in data if len(x[3]) > 1])
-    
-    if omit_unusual_mutations:
+    elif omit_unusual_mutations:
         data = np.array([x for x in data if unusual_mutations(*(x[7:10])) == 0])
     
-    freqs = make_freqs(data)
+    # make counter from pos column. since here, were assuming that were onyl considering sites with one alt allele, and
+    # all parents must be homo-ref, and all children can be at most single mutant (therefore heteroref), we can omit sites
+    # that have more than ac rows worht of occurrences
+    if omit_ac:
+        freqs = Counter(data[:,1])
+        data = np.array([x for x in data if freqs[x[1]] <= ac])
 
-    outdata = []
+    np.savetxt(outfile, data, fmt="%s", delimiter="\t", newline="\n", header=header)
+    print("finished with chr" + str(i))
 
-    if omit_ac or omit_allele_fq:
-        for row in data:
-            pos, alt
-            if omit_ac:
+
+    # freqs = make_freqs(data)
+    # print("freqs table made for chr" + str(i))
+    # outdata = []
+
+    # if omit_ac or omit_allele_fq:
+    #     for row in data:
+    #         # for now, only implementing ac
+    #         pos, alt = row[1], row[3].split(",")
+    #         # assume child is ref/alt heterozygous
+    #         child_alt = row[7].split("|")[0] if row[7][1] == "0" else row[7].split("|")[1]
+    #         alt_allele = alt[int(child_alt) - 1]
+
+    #         if freqs[pos][1][alt_allele] > ac:
+    #             continue
+                
+    #         outdata.append(row)
+    
+    # outdata = np.array(outdata)
+    # np.savetxt(outfile, outdata, delimiter="\t", newline="\n", header=header)
+    # print("finished with chr" + str(i))
+    # break
+
 
 
 
