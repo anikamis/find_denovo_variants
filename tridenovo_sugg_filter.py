@@ -1,9 +1,5 @@
-import sys 
-import time
 import os
-import numpy as np
-import gzip
-from collections import defaultdict, Counter
+
 
 input_path = "/home/amisra7/scratch4-rmccoy22/amisra7/orig_denovo_tsvs/"
 #                     0         1      2      3       4            5             6            7          8            9         10        11        12
@@ -63,25 +59,58 @@ for i in range(1, 23)[::-1]:
 
     if os.path.isfile(outfile):
         continue
+    print(infile, outfile)
+    with open(infile, "r") as infp:
+        with open(outfile, "w") as outfp:
+            pos_to_skip = -1
+            last_pos = -1
+            last_pos_rows = []
 
-    data = np.genfromtxt(infile, dtype=str, delimiter="\t", skip_header=1, autostrip=True)
+            while True:
+                row = infp.readline().strip()
+                if not row:
+                    break
+                data = row.split()
+                if data[0][0] == '#' or data[1] == pos_to_skip:
+                    continue
+                if data[1] != last_pos
+                    if len(last_pos_rows) <= ac:
+                        #outfp.writelines(last_pos_rows)
+                        last_pos_rows = []
 
-    if omit_several_alts and omit_unusual_mutations:
-        data = np.array([x for x in data if len(x[3]) > 1 and unusual_mutations(*(x[7:10])) == 0])
-    elif omit_several_alts:
-        data = np.array([x for x in data if len(x[3]) > 1])
-    elif omit_unusual_mutations:
-        data = np.array([x for x in data if unusual_mutations(*(x[7:10])) == 0])
+                last_pos = data[1]
+                last_pos_rows.append(row)
+                
+                # only keep sites w single alt and sites w homo-ref parents and single mutant child
+                if len(data[3].split(',')) > 1 or unusual_mutations(*(data[7:10])) != 0:
+                    pos_to_skip = data[1]
+                    pos_count = 0
+                    continue
+            
+    print("finished chr" + str(i))
+    break
+
+
+
+
+    # data = np.genfromtxt(infile, dtype=str, delimiter="\t", skip_header=1, autostrip=True)
+
+    # if omit_several_alts and omit_unusual_mutations:
+    #     data = np.array([x for x in data if len(x[3]) > 1 and unusual_mutations(*(x[7:10])) == 0])
+    # elif omit_several_alts:
+    #     data = np.array([x for x in data if len(x[3]) > 1])
+    # elif omit_unusual_mutations:
+    #     data = np.array([x for x in data if unusual_mutations(*(x[7:10])) == 0])
     
     # make counter from pos column. since here, were assuming that were onyl considering sites with one alt allele, and
     # all parents must be homo-ref, and all children can be at most single mutant (therefore heteroref), we can omit sites
     # that have more than ac rows worht of occurrences
-    if omit_ac:
-        freqs = Counter(data[:,1])
-        data = np.array([x for x in data if freqs[x[1]] <= ac])
+    # if omit_ac:
+    #     freqs = Counter(data[:,1])
+    #     data = np.array([x for x in data if freqs[x[1]] <= ac])
 
-    np.savetxt(outfile, data, fmt="%s", delimiter="\t", newline="\n", header=header)
-    print("finished with chr" + str(i))
+    # np.savetxt(outfile, data, fmt="%s", delimiter="\t", newline="\n", header=header)
+    # print("finished with chr" + str(i))
 
 
     # freqs = make_freqs(data)
